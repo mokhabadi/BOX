@@ -35,7 +35,9 @@ public class Printer(BinaryReader binaryReader)
 		if (x != '|') throw new Exception();
 		string key = binaryReader.ReadString();
 		string type = binaryReader.ReadString();
-		if (type == "null") return $"{key} = null;";
+		char valueSign =  binaryReader.ReadChar();
+		if(valueSign != '=' && valueSign != '~') throw new Exception();
+		if(valueSign == '~') return $"{type} {key} = null;";
 		int length = type.EndsWith(']') ? binaryReader.Read7BitEncodedInt() : 0;
 
 		string value = type switch

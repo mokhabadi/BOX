@@ -18,9 +18,11 @@ public class Reader(BinaryReader binaryReader) : IReader
 		key = key[(key.LastIndexOf(' ') + 1)..];
 		if (key != expectedKey) throw new Exception($"value mismatch '{key}', expected '{expectedKey}'");
 		string typeName = binaryReader.ReadString();
-		if (typeName == "null") return default;
 		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
 		if (typeName != type.Name) throw new Exception($"type mismatch '{type.Name}', expected '{typeName}'");
+		char valueSign =  binaryReader.ReadChar();
+		if(valueSign != '=' && valueSign != '~') throw new Exception();
+		if(valueSign == '~') return default;
 		int length = type.IsArray ? binaryReader.Read7BitEncodedInt() : 0;
 
 		object @object = typeName switch

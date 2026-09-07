@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Utility;
 
 namespace Box;
 
@@ -11,10 +10,11 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 	{
 		binaryWriter.Write('|');
 		binaryWriter.Write(key);
-		binaryWriter.Write(value == null ? "null" : (Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T)).Name);
+		binaryWriter.Write((Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T)).Name);
+		binaryWriter.Write(value != null ? '=' : '~');
 		if (value == null) return;
-		if(value is Array array) binaryWriter.Write7BitEncodedInt(array.Length);
-		
+		if (value is Array array) binaryWriter.Write7BitEncodedInt(array.Length);
+
 		Action action = value switch
 		{
 			bool x => () => binaryWriter.Write(x),
