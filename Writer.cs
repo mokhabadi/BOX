@@ -1,101 +1,72 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Utility;
 
 namespace Box;
 
 public class Writer(BinaryWriter binaryWriter) : IWriter
 {
-	public void Write<T>(T value, [CallerArgumentExpression(nameof(value))] string key = "")
+	public void Write<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
-		WriteTypeAndKey<T>(key);
-		WriteValue(value);
-		WriteChar('|');
-	}
-
-	public void WriteNullable<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		WriteHasValue(value);
-		WriteTypeAndKey<T>(key);
-		if (value != null) WriteValue(value);
-		WriteChar('|');
-	}
-
-	public bool Write<T>(T[] value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		WriteChar('A');
-		binaryWriter.Write7BitEncodedInt(value.Length);
-		WriteTypeAndKey<T>(key);
-		WriteChar('[');
-		foreach (T item in value) WriteValue(item);
-		WriteChar(']');
-		WriteChar('|');
-		return true;
-	}
-
-	public bool WriteNullable<T>(T[]? value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		WriteHasValue(value);
-		if (value != null) return Write(value, key);
-		WriteChar('A');
-		WriteTypeAndKey<T>(key);
-		WriteChar('|');
-		return true;
-	}
-
-	private void WriteTypeAndKey<T>(string key)
-	{
-		Type type = typeof(T);
-		type = Nullable.GetUnderlyingType(type) ?? type;
-		if (type.IsAssignableTo(typeof(IBox))) type = typeof(object);
-		string typeName = type.Name;
-		binaryWriter.Write(typeName);
+		binaryWriter.Write('|');
 		binaryWriter.Write(key);
-	}
-
-	private void WriteHasValue<T>(T? value)
-	{
-		char hasValue = value != null ? 'T' : 'F';
-		WriteChar(hasValue);
-	}
-
-	private void WriteChar(char value)
-	{
-		binaryWriter.Write(value);
-	}
-
-	private void WriteValue<T>(T value)
-	{
+		binaryWriter.Write(value == null ? "null" : (Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T)).Name);
+		if (value == null) return;
+		if(value is Array array) binaryWriter.Write7BitEncodedInt(array.Length);
+		
 		Action action = value switch
 		{
-			bool @bool => () => binaryWriter.Write(@bool),
-			char @char => () => binaryWriter.Write(@char),
-			byte @byte => () => binaryWriter.Write(@byte),
-			sbyte @sbyte => () => binaryWriter.Write(@sbyte),
-			short @short => () => binaryWriter.Write(@short),
-			ushort @ushort => () => binaryWriter.Write(@ushort),
-			int @int => () => binaryWriter.Write(@int),
-			uint @uint => () => binaryWriter.Write(@uint),
-			long @long => () => binaryWriter.Write(@long),
-			ulong @ulong => () => binaryWriter.Write(@ulong),
-			float @float => () => binaryWriter.Write(@float),
-			double @double => () => binaryWriter.Write(@double),
-			decimal @decimal => () => binaryWriter.Write(@decimal),
-			string @string => () => binaryWriter.Write(@string),
-			DateTime dateTime => () => binaryWriter.Write(dateTime.ToBinary()),
-			TimeSpan timeSpan => () => binaryWriter.Write(timeSpan.Ticks),
-			object @object => () => WriteObject(@object),
+			bool x => () => binaryWriter.Write(x),
+			char x => () => binaryWriter.Write(x),
+			byte x => () => binaryWriter.Write(x),
+			sbyte x => () => binaryWriter.Write(x),
+			short x => () => binaryWriter.Write(x),
+			ushort x => () => binaryWriter.Write(x),
+			int x => () => binaryWriter.Write(x),
+			uint x => () => binaryWriter.Write(x),
+			long x => () => binaryWriter.Write(x),
+			ulong x => () => binaryWriter.Write(x),
+			float x => () => binaryWriter.Write(x),
+			double x => () => binaryWriter.Write(x),
+			decimal x => () => binaryWriter.Write(x),
+			string x => () => binaryWriter.Write(x),
+			DateTime x => () => binaryWriter.Write(x.ToBinary()),
+			TimeSpan x => () => binaryWriter.Write(x.Ticks),
+			IBox x => () => WriteObject(x),
+			bool[] x => () => WriteArray(x, binaryWriter.Write),
+			char[] x => () => binaryWriter.Write(x),
+			byte[] x => () => binaryWriter.Write(x),
+			sbyte[] x => () => WriteArray(x, binaryWriter.Write),
+			short[] x => () => WriteArray(x, binaryWriter.Write),
+			ushort[] x => () => WriteArray(x, binaryWriter.Write),
+			int[] x => () => WriteArray(x, binaryWriter.Write),
+			uint[] x => () => WriteArray(x, binaryWriter.Write),
+			long[] x => () => WriteArray(x, binaryWriter.Write),
+			ulong[] x => () => WriteArray(x, binaryWriter.Write),
+			float[] x => () => WriteArray(x, binaryWriter.Write),
+			double[] x => () => WriteArray(x, binaryWriter.Write),
+			decimal[] x => () => WriteArray(x, binaryWriter.Write),
+			string[] x => () => WriteArray(x, binaryWriter.Write),
+			DateTime[] x => () => WriteArray(x, x => binaryWriter.Write(x.ToBinary())),
+			TimeSpan[] x => () => WriteArray(x, x => binaryWriter.Write(x.Ticks)),
+			IBox[] x => () => WriteArray(x, WriteObject),
 			_ => throw new NotSupportedException(typeof(T).Name)
 		};
 
 		action();
 	}
 
-	private void WriteObject(object @object)
+	void WriteObject(IBox box)
 	{
-		WriteChar('{');
-		((IBox)@object).WriteTo(this);
-		WriteChar('}');
+		binaryWriter.Write('{');
+		box.WriteTo(this);
+		binaryWriter.Write('}');
+	}
+
+	void WriteArray<T>(T[] array, Action<T> action)
+	{
+		foreach (T t in array) action(t);
 	}
 
 	public static byte[] WriteToByteArray(IBox box)
@@ -103,7 +74,7 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 		using MemoryStream memoryStream = new();
 		using BinaryWriter binaryWriter = new(memoryStream);
 		Writer writer = new(binaryWriter);
-		writer.Write(box);
+		box.WriteTo(writer);
 		byte[] bytes = memoryStream.ToArray();
 		return bytes;
 	}

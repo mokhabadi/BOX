@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Box;
@@ -10,7 +11,7 @@ public class Printer(BinaryReader binaryReader)
 	public string Print()
 	{
 		StringBuilder result = new();
-		
+
 		while (binaryReader.BaseStream.Position < binaryReader.BaseStream.Length)
 		{
 			string[] lines = PrintItem().Split(Environment.NewLine);
@@ -30,92 +31,85 @@ public class Printer(BinaryReader binaryReader)
 
 	private string PrintItem()
 	{
-		bool isNullable = false;
-		bool hasValue = true;
-		bool isArray = false;
-		int arrayLength = 0;
-		int header = binaryReader.PeekChar();
-
-		if (header is 'T' or 'F')
-		{
-			isNullable = true;
-			hasValue = header is 'T';
-			binaryReader.ReadByte();
-			header = binaryReader.PeekChar();
-		}
-
-		if (header is 'A')
-		{
-			isArray = true;
-			binaryReader.ReadByte();
-			if (hasValue) arrayLength = binaryReader.Read7BitEncodedInt();
-		}
-
-		string typeName = binaryReader.ReadString();
+		char x = binaryReader.ReadChar();
+		if (x != '|') throw new Exception();
 		string key = binaryReader.ReadString();
-		string value = hasValue ? isArray ? PrintArray(typeName, arrayLength) : PrintValue(typeName) : "null";
-		ReadChar('|');
-		string result = $"{typeName}{(isArray ? $"[{(hasValue ? arrayLength : "")}]" : "")}{(isNullable ? "?" : "")} {key} = {value};";
-		return result;
-	}
+		string type = binaryReader.ReadString();
+		if (type == "null") return $"{key} = null;";
+		int length = type.EndsWith(']') ? binaryReader.Read7BitEncodedInt() : 0;
 
-	private string PrintArray(string typeName, int arrayLength)
-	{
-		string result = "[";
-		ReadChar('[');
-		for (int i = 0; i < arrayLength; i++) result += PrintValue(typeName) + (i < arrayLength - 1 ? "," : "");
-		result += "]";
-		ReadChar(']');
-		return result;
-	}
-
-	private string PrintValue(string typeName)
-	{
-		return typeName switch
+		string value = type switch
 		{
-			"Boolean" => binaryReader.ReadBoolean().ToString(),
-			"Char" => binaryReader.ReadChar().ToString(),
-			"Byte" => binaryReader.ReadByte().ToString(),
-			"SByte" => binaryReader.ReadSByte().ToString(),
-			"Int16" => binaryReader.ReadInt16().ToString(),
-			"UInt16" => binaryReader.ReadUInt16().ToString(),
-			"Int32" => binaryReader.ReadInt32().ToString(),
-			"UInt32" => binaryReader.ReadUInt32().ToString(),
-			"Int64" => binaryReader.ReadInt64().ToString(),
-			"UInt64" => binaryReader.ReadUInt64().ToString(),
-			"Single" => binaryReader.ReadSingle().ToString(CultureInfo.InvariantCulture),
-			"Double" => binaryReader.ReadDouble().ToString(CultureInfo.InvariantCulture),
-			"Decimal" => binaryReader.ReadDecimal().ToString(CultureInfo.InvariantCulture),
-			"String" => binaryReader.ReadString(),
-			"DateTime" => DateTime.FromBinary(binaryReader.ReadInt64()).ToString(CultureInfo.InvariantCulture),
-			"TimeSpan" => TimeSpan.FromTicks(binaryReader.ReadInt64()).ToString(),
-			_ => PrintObject()
+			nameof(Boolean) => binaryReader.ReadBoolean().ToString(),
+			nameof(Char) => binaryReader.ReadChar().ToString(),
+			nameof(Byte) => binaryReader.ReadByte().ToString(),
+			nameof(SByte) => binaryReader.ReadSByte().ToString(),
+			nameof(Int16) => binaryReader.ReadInt16().ToString(),
+			nameof(UInt16) => binaryReader.ReadUInt16().ToString(),
+			nameof(Int32) => binaryReader.ReadInt32().ToString(),
+			nameof(UInt32) => binaryReader.ReadUInt32().ToString(),
+			nameof(Int64) => binaryReader.ReadInt64().ToString(),
+			nameof(UInt64) => binaryReader.ReadUInt64().ToString(),
+			nameof(Single) => binaryReader.ReadSingle().ToString(CultureInfo.InvariantCulture),
+			nameof(Double) => binaryReader.ReadDouble().ToString(CultureInfo.InvariantCulture),
+			nameof(Decimal) => binaryReader.ReadDecimal().ToString(CultureInfo.InvariantCulture),
+			nameof(String) => binaryReader.ReadString(),
+			nameof(DateTime) => DateTime.FromBinary(binaryReader.ReadInt64()).ToString(CultureInfo.InvariantCulture),
+			nameof(TimeSpan) => TimeSpan.FromTicks(binaryReader.ReadInt64()).ToString(),
+			"Boolean[]" => ReadArray(length, binaryReader.ReadBoolean),
+			"Char[]" => ReadArray(length, binaryReader.ReadChar),
+			"Byte[]" => ReadArray(length, binaryReader.ReadByte),
+			"SByte[]" => ReadArray(length, binaryReader.ReadSByte),
+			"Int16[]" => ReadArray(length, binaryReader.ReadInt16),
+			"UInt16[]" => ReadArray(length, binaryReader.ReadUInt16),
+			"Int32[]" => ReadArray(length, binaryReader.ReadInt32),
+			"UInt32[]" => ReadArray(length, binaryReader.ReadUInt32),
+			"Int64[]" => ReadArray(length, binaryReader.ReadInt64),
+			"UInt64[]" => ReadArray(length, binaryReader.ReadUInt64),
+			"Single[]" => ReadArray(length, binaryReader.ReadSingle),
+			"Double[]" => ReadArray(length, binaryReader.ReadDouble),
+			"Decimal[]" => ReadArray(length, binaryReader.ReadDecimal),
+			"String[]" => ReadArray(length, binaryReader.ReadString),
+			"DateTime[]" => ReadArray(length, () => DateTime.FromBinary(binaryReader.ReadInt64())),
+			"TimeSpan[]" => ReadArray(length, () => TimeSpan.FromTicks(binaryReader.ReadInt64())),
+			_ when length > 0 => ReadArray(length),
+			_ => ReadObject(),
 		};
+
+		return $"{type} {key} = {value};";
 	}
 
-	private string PrintObject()
+	private string ReadArray<T>(int length, Func<T> func)
 	{
-		StringBuilder result = new();
-		result.AppendLine();
-		result.AppendLine("{");
-		ReadChar('{');
-		int value = binaryReader.PeekChar();
-
-		while (value != '}')
+		StringBuilder stringBuilder = new("[");
+		for (int i = 0; i < length; i++)
 		{
-			result.AppendLine(PrintItem());
-			value = binaryReader.PeekChar();
+			stringBuilder.Append(func());
+			if (i != length - 1) stringBuilder.Append(", ");
 		}
-
-		ReadChar('}');
-		result.Append('}');
-		return result.ToString();
+		stringBuilder.Append(']');
+		return stringBuilder.ToString();
 	}
 
-
-	private void ReadChar(char expectedValue)
+	private string ReadArray(int length)
 	{
-		char value = binaryReader.ReadChar();
-		if (value != expectedValue) throw new Exception($"value mismatch '{value}', expected '{expectedValue}'");
+		StringBuilder stringBuilder = new("[");
+		for (int i = 0; i < length; i++)
+		{
+			stringBuilder.Append(ReadObject());
+			if (i != length - 1) stringBuilder.Append(", ");
+		}
+		stringBuilder.Append(']');
+		return stringBuilder.ToString();
+	}
+
+	private string ReadObject()
+	{
+		StringBuilder stringBuilder = new("{");
+		if (binaryReader.ReadChar() != '{') throw new Exception();
+		while (binaryReader.PeekChar() != '}') stringBuilder.Append(PrintItem());
+		binaryReader.ReadChar();
+		stringBuilder.Append('}');
+		return stringBuilder.ToString();
 	}
 }

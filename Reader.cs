@@ -6,126 +6,84 @@ namespace Box;
 
 public class Reader(BinaryReader binaryReader) : IReader
 {
-	public void Read<T>(out T value, [CallerArgumentExpression(nameof(value))] string key = "")
+	public void Read<T>(out T? value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
 		value = Read(default(T), key);
 	}
 
-	public void ReadNullable<T>(out T? value, [CallerArgumentExpression(nameof(value))] string key = "")
+	public T? Read<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
-		value = ReadNullable(default(T), key);
-	}
-
-	public void Read<T>(out T[] value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		value = Read(default(T[]), key);
-	}
-
-	public void ReadNullable<T>(out T[]? value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		value = ReadNullable(default(T[]), key);
-	}
-
-	public T Read<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		string typeName = ReadTypeAndKey<T>(key);
-		value = ReadValue<T>(typeName);
-		ReadChar('|');
-		return value;
-	}
-
-	public T? ReadNullable<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		bool hasValue = ReadHasValue();
-		if (hasValue) return Read(value, key);
-		ReadTypeAndKey<T>(key);
-		ReadChar('|');
-		return value;
-	}
-
-	public T[] Read<T>(T[]? value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		ReadChar('A');
-		int length = binaryReader.Read7BitEncodedInt();
-		string typeName = ReadTypeAndKey<T>(key);
-		value = new T[length];
-		ReadChar('[');
-		for (int i = 0; i < length; i++) value[i] = ReadValue<T>(typeName);
-		ReadChar(']');
-		ReadChar('|');
-		return value;
-	}
-
-	public T[]? ReadNullable<T>(T[]? value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		bool hasValue = ReadHasValue();
-		if (hasValue) return Read(value, key);
-		ReadChar('A');
-		ReadTypeAndKey<T>(key);
-		ReadChar('|');
-		return null;
-	}
-
-	private string ReadTypeAndKey<T>(string expectedKey)
-	{
-		Type type = typeof(T);
-		type = Nullable.GetUnderlyingType(type) ?? type;
-		if (type.IsAssignableTo(typeof(IBox))) type = typeof(object);
-		string expectedTypeName = type.Name;
-		string typeName = binaryReader.ReadString();
-		if (typeName != expectedTypeName) throw new Exception($"type mismatch '{typeName}', expected '{expectedTypeName}'");
-		string key = binaryReader.ReadString();
-		expectedKey = expectedKey[(expectedKey.LastIndexOf(' ') + 1)..];
+		if (binaryReader.ReadChar() != '|') throw new Exception();
+		string expectedKey = binaryReader.ReadString();
+		key = key[(key.LastIndexOf(' ') + 1)..];
 		if (key != expectedKey) throw new Exception($"value mismatch '{key}', expected '{expectedKey}'");
-		if (type.IsAssignableTo(typeof(IBox))) typeName = nameof(IBox);
-		return typeName;
-	}
+		string typeName = binaryReader.ReadString();
+		if (typeName == "null") return default;
+		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+		if (typeName != type.Name) throw new Exception($"type mismatch '{type.Name}', expected '{typeName}'");
+		int length = type.IsArray ? binaryReader.Read7BitEncodedInt() : 0;
 
-	private void ReadChar(char expectedValue)
-	{
-		char value = binaryReader.ReadChar();
-		if (value != expectedValue) throw new Exception($"value mismatch '{value}', expected '{expectedValue}'");
-	}
-
-	private bool ReadHasValue()
-	{
-		char hasValue = binaryReader.ReadChar();
-		if (hasValue == 'T') return true;
-		if (hasValue == 'F') return false;
-		throw new Exception($"undefined value state: '{hasValue}'");
-	}
-
-	private T ReadValue<T>(string typeName)
-	{
-		return typeName switch
+		object @object = typeName switch
 		{
-			nameof(Boolean) => (T)(object)binaryReader.ReadBoolean(),
-			nameof(Char) => (T)(object)binaryReader.ReadChar(),
-			nameof(Byte) => (T)(object)binaryReader.ReadByte(),
-			nameof(SByte) => (T)(object)binaryReader.ReadSByte(),
-			nameof(Int16) => (T)(object)binaryReader.ReadInt16(),
-			nameof(UInt16) => (T)(object)binaryReader.ReadUInt16(),
-			nameof(Int32) => (T)(object)binaryReader.ReadInt32(),
-			nameof(UInt32) => (T)(object)binaryReader.ReadUInt32(),
-			nameof(Int64) => (T)(object)binaryReader.ReadInt64(),
-			nameof(UInt64) => (T)(object)binaryReader.ReadUInt64(),
-			nameof(Single) => (T)(object)binaryReader.ReadSingle(),
-			nameof(Double) => (T)(object)binaryReader.ReadDouble(),
-			nameof(Decimal) => (T)(object)binaryReader.ReadDecimal(),
-			nameof(String) => (T)(object)binaryReader.ReadString(),
-			nameof(DateTime) => (T)(object)DateTime.FromBinary(binaryReader.ReadInt64()),
-			nameof(TimeSpan) => (T)(object)TimeSpan.FromTicks(binaryReader.ReadInt64()),
-			nameof(Object) => ReadObject<T>(),
-			_ => throw new NotSupportedException(typeName)
+			nameof(Boolean) => binaryReader.ReadBoolean(),
+			nameof(Char) => binaryReader.ReadChar(),
+			nameof(Byte) => binaryReader.ReadByte(),
+			nameof(SByte) => binaryReader.ReadSByte(),
+			nameof(Int16) => binaryReader.ReadInt16(),
+			nameof(UInt16) => binaryReader.ReadUInt16(),
+			nameof(Int32) => binaryReader.ReadInt32(),
+			nameof(UInt32) => binaryReader.ReadUInt32(),
+			nameof(Int64) => binaryReader.ReadInt64(),
+			nameof(UInt64) => binaryReader.ReadUInt64(),
+			nameof(Single) => binaryReader.ReadSingle(),
+			nameof(Double) => binaryReader.ReadDouble(),
+			nameof(Decimal) => binaryReader.ReadDecimal(),
+			nameof(String) => binaryReader.ReadString(),
+			nameof(DateTime) => DateTime.FromBinary(binaryReader.ReadInt64()),
+			nameof(TimeSpan) => TimeSpan.FromTicks(binaryReader.ReadInt64()),
+			"Boolean[]" => ReadArray(length, binaryReader.ReadBoolean),
+			"Char[]" => binaryReader.ReadChars(length),
+			"Byte[]" => binaryReader.ReadBytes(length),
+			"SByte[]" => ReadArray(length, binaryReader.ReadSByte),
+			"Int16[]" => ReadArray(length, binaryReader.ReadInt16),
+			"UInt16[]" => ReadArray(length, binaryReader.ReadUInt16),
+			"Int32[]" => ReadArray(length, binaryReader.ReadInt32),
+			"UInt32[]" => ReadArray(length, binaryReader.ReadUInt32),
+			"Int64[]" => ReadArray(length, binaryReader.ReadInt64),
+			"UInt64[]" => ReadArray(length, binaryReader.ReadUInt64),
+			"Single[]" => ReadArray(length, binaryReader.ReadSingle),
+			"Double[]" => ReadArray(length, binaryReader.ReadDouble),
+			"Decimal[]" => ReadArray(length, binaryReader.ReadDecimal),
+			"String[]" => ReadArray(length, binaryReader.ReadString),
+			"DateTime[]" => ReadArray(length, () => DateTime.FromBinary(binaryReader.ReadInt64())),
+			"TimeSpan[]" => ReadArray(length, () => TimeSpan.FromTicks(binaryReader.ReadInt64())),
+			_ when typeof(T).IsArray => ReadArray(length, typeof(T).GetElementType()!),
+			_ => ReadObject(typeof(T)),
 		};
+
+		return (T?)@object;
 	}
 
-	private T ReadObject<T>()
+	private object ReadObject(Type type)
 	{
-		ReadChar('{');
-		T value = (T)RuntimeHelpers.GetUninitializedObject(typeof(T));
-		((IBox)value).ReadFrom(this);
-		ReadChar('}');
-		return value;
+		if (binaryReader.ReadChar() != '{') throw new Exception();
+		IBox box = (IBox)RuntimeHelpers.GetUninitializedObject(type);
+		box.ReadFrom(this);
+		if (binaryReader.ReadChar() != '}') throw new Exception();
+		return box;
+	}
+
+	private T[] ReadArray<T>(int length, Func<T> func)
+	{
+		T[] array = new T[length];
+		for (int i = 0; i < length; i++) array[i] = func();
+		return array;
+	}
+
+	private Array ReadArray(int length, Type type)
+	{
+		Array array = Array.CreateInstance(type, length);
+		for (int i = 0; i < length; i++) array.SetValue(ReadObject(type), i);
+		return array;
 	}
 }
