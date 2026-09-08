@@ -28,43 +28,39 @@ public class Reader(BinaryReader binaryReader) : IReader
 
 	private T ReadValue<T>(Type type)
 	{
-		int length = type.IsArray ? binaryReader.Read7BitEncodedInt() : 0;
-
-		object @object = type.Name switch
-		{
-			nameof(Boolean) => binaryReader.ReadBoolean(),
-			nameof(Char) => binaryReader.ReadChar(),
-			nameof(Byte) => binaryReader.ReadByte(),
-			nameof(SByte) => binaryReader.ReadSByte(),
-			nameof(Int16) => binaryReader.ReadInt16(),
-			nameof(UInt16) => binaryReader.ReadUInt16(),
-			nameof(Int32) => binaryReader.ReadInt32(),
-			nameof(UInt32) => binaryReader.ReadUInt32(),
-			nameof(Int64) => binaryReader.ReadInt64(),
-			nameof(UInt64) => binaryReader.ReadUInt64(),
-			nameof(Single) => binaryReader.ReadSingle(),
-			nameof(Double) => binaryReader.ReadDouble(),
-			nameof(Decimal) => binaryReader.ReadDecimal(),
-			nameof(String) => binaryReader.ReadString(),
-			nameof(DateTime) => DateTime.FromBinary(binaryReader.ReadInt64()),
-			nameof(TimeSpan) => TimeSpan.FromTicks(binaryReader.ReadInt64()),
-			"Boolean[]" => ReadArray(length, binaryReader.ReadBoolean),
-			"Char[]" => binaryReader.ReadChars(length),
-			"Byte[]" or "SByte[]" => binaryReader.ReadBytes(length),
-			"Int16[]" or "UInt16[]" => ReadArray(length, binaryReader.ReadInt16),
-			"Int32[]" or "UInt32[]" => ReadArray(length, binaryReader.ReadInt32),
-			"Int64[]" or "UInt64[]" => ReadArray(length, binaryReader.ReadInt64),
-			"Single[]" => ReadArray(length, binaryReader.ReadSingle),
-			"Double[]" => ReadArray(length, binaryReader.ReadDouble),
-			"Decimal[]" => ReadArray(length, binaryReader.ReadDecimal),
-			"String[]" => ReadArray(length, binaryReader.ReadString),
-			"DateTime[]" => ReadArray(length, () => DateTime.FromBinary(binaryReader.ReadInt64())),
-			"TimeSpan[]" => ReadArray(length, () => TimeSpan.FromTicks(binaryReader.ReadInt64())),
-			_ when type.IsArray => ReadArray(length, type.GetElementType()!),
-			_ => ReadObject(type),
-		};
-
-		return (T)@object;
+		if (type == typeof(bool)) return (T)(object)binaryReader.ReadBoolean();
+		if (type == typeof(char)) return (T)(object)binaryReader.ReadChar();
+		if (type == typeof(byte)) return (T)(object)binaryReader.ReadByte();
+		if (type == typeof(sbyte)) return (T)(object)binaryReader.ReadSByte();
+		if (type == typeof(short)) return (T)(object)binaryReader.ReadInt16();
+		if (type == typeof(ushort)) return (T)(object)binaryReader.ReadUInt16();
+		if (type == typeof(int)) return (T)(object)binaryReader.ReadInt32();
+		if (type == typeof(uint)) return (T)(object)binaryReader.ReadUInt32();
+		if (type == typeof(long)) return (T)(object)binaryReader.ReadInt64();
+		if (type == typeof(ulong)) return (T)(object)binaryReader.ReadUInt64();
+		if (type == typeof(float)) return (T)(object)binaryReader.ReadSingle();
+		if (type == typeof(double)) return (T)(object)binaryReader.ReadDouble();
+		if (type == typeof(decimal)) return (T)(object)binaryReader.ReadDecimal();
+		if (type == typeof(string)) return (T)(object)binaryReader.ReadString();
+		if (type == typeof(DateTime)) return (T)(object)DateTime.FromBinary(binaryReader.ReadInt64());
+		if (type == typeof(TimeSpan)) return (T)(object)TimeSpan.FromTicks(binaryReader.ReadInt64());
+		if (type.IsAssignableTo(typeof(IBox))) return (T)ReadObject(type);
+		if (!type.IsArray) throw new NotSupportedException(type.FullName);
+		int length = binaryReader.Read7BitEncodedInt();
+		if (type == typeof(bool[])) return (T)(object)ReadArray(length, binaryReader.ReadBoolean);
+		if (type == typeof(char[])) return (T)(object)binaryReader.ReadChars(length);
+		if (type == typeof(byte[]) || type == typeof(sbyte[])) return (T)(object)binaryReader.ReadBytes(length);
+		if (type == typeof(short[]) || type == typeof(ushort[])) return (T)(object)ReadArray(length, binaryReader.ReadInt16);
+		if (type == typeof(int[]) || type == typeof(uint[])) return (T)(object)ReadArray(length, binaryReader.ReadInt32);
+		if (type == typeof(long[]) || type == typeof(ulong[])) return (T)(object)ReadArray(length, binaryReader.ReadInt64);
+		if (type == typeof(float[])) return (T)(object)ReadArray(length, binaryReader.ReadSingle);
+		if (type == typeof(double[])) return (T)(object)ReadArray(length, binaryReader.ReadDouble);
+		if (type == typeof(decimal[])) return (T)(object)ReadArray(length, binaryReader.ReadDecimal);
+		if (type == typeof(string[])) return (T)(object)ReadArray(length, binaryReader.ReadString);
+		if (type == typeof(DateTime[])) return (T)(object)ReadArray(length, () => DateTime.FromBinary(binaryReader.ReadInt64()));
+		if (type == typeof(TimeSpan[])) return (T)(object)ReadArray(length, () => TimeSpan.FromTicks(binaryReader.ReadInt64()));
+		if (type.IsAssignableTo(typeof(IBox[]))) return (T)(object)ReadArray(length, type.GetElementType()!);
+		throw new NotSupportedException(type.FullName);
 	}
 
 	private object ReadObject(Type type)
