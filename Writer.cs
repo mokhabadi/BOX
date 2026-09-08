@@ -17,9 +17,7 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 
 	private void WriteValue<T>(T? value)
 	{
-		if (value is null) ;
-		else if (value is IBox box) WriteObject(box);
-		else if (value is Array array) WriteArray(array);
+		if (value is Array array) WriteArray(array);
 		else if (value is bool @bool) binaryWriter.Write(@bool);
 		else if (value is char @char) binaryWriter.Write(@char);
 		else if (value is byte @byte) binaryWriter.Write(@byte);
@@ -36,7 +34,8 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 		else if (value is string @string) binaryWriter.Write(@string);
 		else if (value is DateTime dateTime) binaryWriter.Write(dateTime.ToBinary());
 		else if (value is TimeSpan timeSpan) binaryWriter.Write(timeSpan.Ticks);
-		else throw new NotSupportedException(value.ToString());
+		else if (value is IBox box) WriteObject(box);
+		else if (value != null) throw new NotSupportedException(typeof(T).FullName);
 		binaryWriter.Write(';');
 	}
 

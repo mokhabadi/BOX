@@ -77,7 +77,7 @@ public class Test
 	private readonly string[] stringArray = ["alice", "bob"];
 	private readonly DateTime[] dateTimeArray = [new(2026, 6, 6), new(2027, 7, 7)];
 	private readonly TimeSpan[] timeSpanArray = [TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(30)];
-	private readonly TestBox[] testBoxArray = [new (1, "one", new([1, 1, 1])), new(2, "two", new([2, 2, 2]))];
+	private readonly TestBox[] testBoxArray = [new(1, "one", new([1, 1, 1])), new(2, "two", new([2, 2, 2]))];
 
 	private readonly bool[]? boolNullArray = null;
 	private readonly char[]? charNullArray = null;
@@ -113,8 +113,8 @@ public class Test
 	private readonly string[]? stringNonNullArray = ["alice", "bob"];
 	private readonly DateTime[]? dateTimeNonNullArray = [new(2026, 6, 6), new(2027, 7, 7)];
 	private readonly TimeSpan[]? timeSpanNonNullArray = [TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(30)];
-	private readonly TestBox[]? testBoxNonNullArray = [new (1, "one", new([1, 1.1f, 1.2f])), new(2, "two", new([2, 2.1f, 2.2f]))];
-	private readonly int[][] array2d = [[1, 2], [3, 4]];
+	private readonly TestBox[]? testBoxNonNullArray = [new(1, "one", new([1, 1.1f, 1.2f])), new(2, "two", new([2, 2.1f, 2.2f]))];
+	private readonly int[][] array2D = [[1, 2], [3, 4]];
 
 	public void Execute()
 	{
@@ -189,7 +189,7 @@ public class Test
 		writer.Write(dateTimeNonNull);
 		writer.Write(timeSpanNonNull);
 		writer.Write(testBoxNonNull);
-		
+
 		writer.Write(boolArray);
 		writer.Write(charArray);
 		writer.Write(byteArray);
@@ -207,7 +207,7 @@ public class Test
 		writer.Write(dateTimeArray);
 		writer.Write(timeSpanArray);
 		writer.Write(testBoxArray);
-		
+
 		writer.Write(boolNullArray);
 		writer.Write(charNullArray);
 		writer.Write(byteNullArray);
@@ -225,7 +225,7 @@ public class Test
 		writer.Write(dateTimeNullArray);
 		writer.Write(timeSpanNullArray);
 		writer.Write(testBoxNullArray);
-		
+
 		writer.Write(boolNonNullArray);
 		writer.Write(charNonNullArray);
 		writer.Write(byteNonNullArray);
@@ -243,14 +243,14 @@ public class Test
 		writer.Write(dateTimeNonNullArray);
 		writer.Write(timeSpanNonNullArray);
 		writer.Write(testBoxNonNullArray);
-		
+
 		writer.Write(testBoxValue);
 		writer.Write(testBoxNull);
 		writer.Write(testBoxNonNull);
 		writer.Write(testBoxArray);
 		writer.Write(testBoxNullArray);
 		writer.Write(testBoxNonNullArray);
-		writer.Write(array2d);
+		writer.Write(array2D);
 	}
 
 	private void Read(MemoryStream stream)
@@ -366,13 +366,13 @@ public class Test
 		reader.Read(out TimeSpan[]? timeSpanNonNullArray);
 		reader.Read(out TestBox[]? testBoxNonNullArray);
 
-		TestBox testBox1 = reader.Read(default(TestBox), nameof(testBoxValue));
-		TestBox? testBox2 = reader.Read(default(TestBox), nameof(testBoxNull));
-		TestBox? testBox3 = reader.Read(default(TestBox), nameof(testBoxNonNull));
-		TestBox[] testBoxes1 = reader.Read(default(TestBox[]), nameof(testBoxArray));
-		TestBox[]? testBoxes2 = reader.Read(default(TestBox[]), nameof(testBoxNullArray));
-		TestBox[]? testBoxes3 = reader.Read(default(TestBox[]), nameof(testBoxNonNullArray));
-		reader.Read(out int[][] array2d);
+		TestBox testBox1 = reader.Read<TestBox>(null, nameof(testBoxValue));
+		TestBox? testBox2 = reader.Read<TestBox?>(null, nameof(testBoxNull));
+		TestBox? testBox3 = reader.Read<TestBox?>(null, nameof(testBoxNonNull));
+		TestBox[] testBoxes1 = reader.Read<TestBox[]>(null, nameof(testBoxArray));
+		TestBox[]? testBoxes2 = reader.Read<TestBox[]?>(null, nameof(testBoxNullArray));
+		TestBox[]? testBoxes3 = reader.Read<TestBox[]?>(null, nameof(testBoxNonNullArray));
+		reader.Read(out int[][] array2D);
 
 		AssertEquality(this.boolValue, boolValue);
 		AssertEquality(this.charValue, charValue);
@@ -481,13 +481,15 @@ public class Test
 		AssertEquality(this.dateTimeNonNullArray, dateTimeNonNullArray);
 		AssertEquality(this.timeSpanNonNullArray, timeSpanNonNullArray);
 		AssertEquality(this.testBoxNonNullArray, testBoxNonNullArray);
-		
+
 		AssertEquality(testBox1, testBoxValue);
 		AssertEquality(testBox2, testBoxNull);
 		AssertEquality(testBox3, testBoxNonNull);
 		AssertEquality(testBoxes1, testBoxArray);
 		AssertEquality(testBoxes2, testBoxNullArray);
 		AssertEquality(testBoxes3, testBoxNonNullArray);
+
+		for (int i = 0; i < array2D.Length; i++) AssertEquality(this.array2D[i], array2D[i]);
 	}
 
 	private static void AssertEquality<T>(T t1, T t2)
@@ -503,9 +505,9 @@ public class Test
 
 	private class TestBox : IBox
 	{
-		public int Id { get; private set; }
-		public string Name { get; private set; }
-		public InnerBox InnerBox { get; private set; }
+		private int Id { get; set; }
+		private string Name { get; set; }
+		private InnerBox InnerBox { get; set; }
 
 		public TestBox(int id, string name, InnerBox innerBox)
 		{
@@ -538,9 +540,9 @@ public class Test
 		public override string ToString() => $"id: {Id}, name: {Name}, innerBox: {InnerBox}";
 	}
 
-	public class InnerBox : IBox
+	private class InnerBox : IBox
 	{
-		public float[] Dimensions { get; private set; }
+		private float[] Dimensions { get; set; }
 
 		public InnerBox(float[] dimensions)
 		{

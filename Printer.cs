@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Box;
@@ -43,23 +42,23 @@ public class Printer(BinaryReader binaryReader)
 	{
 		string value;
 		if (valueSign == '~') value = "null";
-		else if (type == typeof(bool).Name) value = binaryReader.ReadBoolean().ToString();
-		else if (type == typeof(char).Name) value = binaryReader.ReadChar().ToString();
-		else if (type == typeof(byte).Name) value = binaryReader.ReadByte().ToString();
-		else if (type == typeof(sbyte).Name) value = binaryReader.ReadSByte().ToString();
-		else if (type == typeof(short).Name) value = binaryReader.ReadInt16().ToString();
-		else if (type == typeof(ushort).Name) value = binaryReader.ReadUInt16().ToString();
-		else if (type == typeof(int).Name) value = binaryReader.ReadInt32().ToString();
-		else if (type == typeof(uint).Name) value = binaryReader.ReadUInt32().ToString();
-		else if (type == typeof(long).Name) value = binaryReader.ReadInt64().ToString();
-		else if (type == typeof(ulong).Name) value = binaryReader.ReadUInt64().ToString();
-		else if (type == typeof(float).Name) value = binaryReader.ReadSingle().ToString();
-		else if (type == typeof(double).Name) value = binaryReader.ReadDouble().ToString();
-		else if (type == typeof(decimal).Name) value = binaryReader.ReadDecimal().ToString();
-		else if (type == typeof(string).Name) value = binaryReader.ReadString();
-		else if (type == typeof(DateTime).Name) value = DateTime.FromBinary(binaryReader.ReadInt64()).ToString();
-		else if (type == typeof(TimeSpan).Name) value = TimeSpan.FromTicks(binaryReader.ReadInt64()).ToString();
 		else if (type.EndsWith(']')) value = ReadArray(type[..^2]);
+		else if (type == nameof(Boolean)) value = binaryReader.ReadBoolean().ToString();
+		else if (type == nameof(Char)) value = binaryReader.ReadChar().ToString();
+		else if (type == nameof(Byte)) value = binaryReader.ReadByte().ToString();
+		else if (type == nameof(SByte)) value = binaryReader.ReadSByte().ToString();
+		else if (type == nameof(Int16)) value = binaryReader.ReadInt16().ToString();
+		else if (type == nameof(UInt16)) value = binaryReader.ReadUInt16().ToString();
+		else if (type == nameof(Int32)) value = binaryReader.ReadInt32().ToString();
+		else if (type == nameof(UInt32)) value = binaryReader.ReadUInt32().ToString();
+		else if (type == nameof(Int64)) value = binaryReader.ReadInt64().ToString();
+		else if (type == nameof(UInt64)) value = binaryReader.ReadUInt64().ToString();
+		else if (type == nameof(Single)) value = binaryReader.ReadSingle().ToString(CultureInfo.InvariantCulture);
+		else if (type == nameof(Double)) value = binaryReader.ReadDouble().ToString(CultureInfo.InvariantCulture);
+		else if (type == nameof(Decimal)) value = binaryReader.ReadDecimal().ToString(CultureInfo.InvariantCulture);
+		else if (type == nameof(String)) value = binaryReader.ReadString();
+		else if (type == nameof(DateTime)) value = DateTime.FromBinary(binaryReader.ReadInt64()).ToString(CultureInfo.InvariantCulture);
+		else if (type == nameof(TimeSpan)) value = TimeSpan.FromTicks(binaryReader.ReadInt64()).ToString();
 		else value = ReadObject();
 		if (binaryReader.ReadChar() != ';') throw new Exception();
 		return value;
@@ -85,7 +84,7 @@ public class Printer(BinaryReader binaryReader)
 
 		for (int i = 0; i < length; i++)
 		{
-			stringBuilder.Append(PrintValue('=',type));
+			stringBuilder.Append(PrintValue('=', type));
 			if (i != length - 1) stringBuilder.Append(", ");
 		}
 

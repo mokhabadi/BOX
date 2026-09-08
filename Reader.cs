@@ -6,7 +6,7 @@ namespace Box;
 
 public class Reader(BinaryReader binaryReader) : IReader
 {
-	public void Read<T>(out T? value, [CallerArgumentExpression(nameof(value))] string key = "")
+	public void Read<T>(out T value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
 		string expectedKey = binaryReader.ReadString();
 		key = key[(key.LastIndexOf(' ') + 1)..];
@@ -16,19 +16,20 @@ public class Reader(BinaryReader binaryReader) : IReader
 		if (typeName != type.Name) throw new Exception($"type mismatch '{type.Name}', expected '{typeName}'");
 		char valueSign = binaryReader.ReadChar();
 		if (valueSign is not ('=' or '~')) throw new Exception();
-		value = (T)ReadValue(valueSign, type)!;
+		value = (T)ReadValue(valueSign, type);
 	}
 
-	public T? Read<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
+	public T Read<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
 		Read(out T? t, key);
-		return t;
+		return t!;
 	}
 
-	private object? ReadValue(char valueSign, Type type)
+	private object ReadValue(char valueSign, Type type)
 	{
 		object? value;
 		if (valueSign == '~') value = null;
+		else if (type.IsArray) value = ReadArray(type.GetElementType()!);
 		else if (type == typeof(bool)) value = binaryReader.ReadBoolean();
 		else if (type == typeof(char)) value = binaryReader.ReadChar();
 		else if (type == typeof(byte)) value = binaryReader.ReadByte();
@@ -46,10 +47,9 @@ public class Reader(BinaryReader binaryReader) : IReader
 		else if (type == typeof(DateTime)) value = DateTime.FromBinary(binaryReader.ReadInt64());
 		else if (type == typeof(TimeSpan)) value = TimeSpan.FromTicks(binaryReader.ReadInt64());
 		else if (type.IsAssignableTo(typeof(IBox))) value = ReadObject(type);
-		else if (type.IsArray) value = ReadArray(type.GetElementType()!);
 		else throw new NotSupportedException(type.FullName);
 		if (binaryReader.ReadChar() != ';') throw new Exception();
-		return value;
+		return value!;
 	}
 
 	private object ReadObject(Type type)
