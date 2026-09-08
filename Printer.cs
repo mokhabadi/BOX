@@ -32,12 +32,12 @@ public class Printer(BinaryReader binaryReader)
 	private string PrintItem()
 	{
 		char x = binaryReader.ReadChar();
-		if (x != '|') throw new Exception();
+		if (x != ';') throw new Exception();
 		string key = binaryReader.ReadString();
 		string type = binaryReader.ReadString();
-		char valueSign =  binaryReader.ReadChar();
-		if(valueSign != '=' && valueSign != '~') throw new Exception();
-		if(valueSign == '~') return $"{type} {key} = null;";
+		char valueSign = binaryReader.ReadChar();
+		if (valueSign != '=' && valueSign != '~') throw new Exception();
+		if (valueSign == '~') return $"{type} {key} = null;";
 		int length = type.EndsWith(']') ? binaryReader.Read7BitEncodedInt() : 0;
 
 		string value = type switch
@@ -59,15 +59,11 @@ public class Printer(BinaryReader binaryReader)
 			nameof(DateTime) => DateTime.FromBinary(binaryReader.ReadInt64()).ToString(CultureInfo.InvariantCulture),
 			nameof(TimeSpan) => TimeSpan.FromTicks(binaryReader.ReadInt64()).ToString(),
 			"Boolean[]" => ReadArray(length, binaryReader.ReadBoolean),
-			"Char[]" => ReadArray(length, binaryReader.ReadChar),
-			"Byte[]" => ReadArray(length, binaryReader.ReadByte),
-			"SByte[]" => ReadArray(length, binaryReader.ReadSByte),
-			"Int16[]" => ReadArray(length, binaryReader.ReadInt16),
-			"UInt16[]" => ReadArray(length, binaryReader.ReadUInt16),
-			"Int32[]" => ReadArray(length, binaryReader.ReadInt32),
-			"UInt32[]" => ReadArray(length, binaryReader.ReadUInt32),
-			"Int64[]" => ReadArray(length, binaryReader.ReadInt64),
-			"UInt64[]" => ReadArray(length, binaryReader.ReadUInt64),
+			"Char[]" => string.Join(',',binaryReader.ReadChars(length)),
+			"Byte[]" or "SByte[]" => string.Join(',',binaryReader.ReadBytes(length)),
+			"Int16[]" or "UInt16[]" => ReadArray(length, binaryReader.ReadInt16),
+			"Int32[]" or "UInt32[]" => ReadArray(length, binaryReader.ReadInt32),
+			"Int64[]" or "UInt64[]" => ReadArray(length, binaryReader.ReadInt64),
 			"Single[]" => ReadArray(length, binaryReader.ReadSingle),
 			"Double[]" => ReadArray(length, binaryReader.ReadDouble),
 			"Decimal[]" => ReadArray(length, binaryReader.ReadDecimal),
@@ -83,33 +79,44 @@ public class Printer(BinaryReader binaryReader)
 
 	private string ReadArray<T>(int length, Func<T> func)
 	{
+		if (binaryReader.ReadChar() != '[') throw new Exception();
 		StringBuilder stringBuilder = new("[");
+		
 		for (int i = 0; i < length; i++)
 		{
+			if (binaryReader.ReadChar() != ',') throw new Exception();
 			stringBuilder.Append(func());
 			if (i != length - 1) stringBuilder.Append(", ");
 		}
+
 		stringBuilder.Append(']');
+		if (binaryReader.ReadChar() != ']') throw new Exception();
 		return stringBuilder.ToString();
 	}
 
 	private string ReadArray(int length)
 	{
+		if (binaryReader.ReadChar() != '[') throw new Exception();
 		StringBuilder stringBuilder = new("[");
 		for (int i = 0; i < length; i++)
 		{
+			if (binaryReader.ReadChar() != ',') throw new Exception();
 			stringBuilder.Append(ReadObject());
 			if (i != length - 1) stringBuilder.Append(", ");
 		}
+
 		stringBuilder.Append(']');
+		if (binaryReader.ReadChar() != ']') throw new Exception();
 		return stringBuilder.ToString();
 	}
 
 	private string ReadObject()
 	{
-		StringBuilder stringBuilder = new("{");
+		StringBuilder stringBuilder = new();
+		stringBuilder.AppendLine();
+		stringBuilder.AppendLine("{");
 		if (binaryReader.ReadChar() != '{') throw new Exception();
-		while (binaryReader.PeekChar() != '}') stringBuilder.Append(PrintItem());
+		while (binaryReader.PeekChar() != '}') stringBuilder.AppendLine(PrintItem());
 		binaryReader.ReadChar();
 		stringBuilder.Append('}');
 		return stringBuilder.ToString();

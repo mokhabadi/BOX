@@ -13,7 +13,7 @@ public class Reader(BinaryReader binaryReader) : IReader
 
 	public T? Read<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
-		if (binaryReader.ReadChar() != '|') throw new Exception();
+		if (binaryReader.ReadChar() != ';') throw new Exception();
 		string expectedKey = binaryReader.ReadString();
 		key = key[(key.LastIndexOf(' ') + 1)..];
 		if (key != expectedKey) throw new Exception($"value mismatch '{key}', expected '{expectedKey}'");
@@ -45,14 +45,10 @@ public class Reader(BinaryReader binaryReader) : IReader
 			nameof(TimeSpan) => TimeSpan.FromTicks(binaryReader.ReadInt64()),
 			"Boolean[]" => ReadArray(length, binaryReader.ReadBoolean),
 			"Char[]" => binaryReader.ReadChars(length),
-			"Byte[]" => binaryReader.ReadBytes(length),
-			"SByte[]" => ReadArray(length, binaryReader.ReadSByte),
-			"Int16[]" => ReadArray(length, binaryReader.ReadInt16),
-			"UInt16[]" => ReadArray(length, binaryReader.ReadUInt16),
-			"Int32[]" => ReadArray(length, binaryReader.ReadInt32),
-			"UInt32[]" => ReadArray(length, binaryReader.ReadUInt32),
-			"Int64[]" => ReadArray(length, binaryReader.ReadInt64),
-			"UInt64[]" => ReadArray(length, binaryReader.ReadUInt64),
+			"Byte[]" or "SByte[]" => binaryReader.ReadBytes(length),
+			"Int16[]" or "UInt16[]" => ReadArray(length, binaryReader.ReadInt16),
+			"Int32[]" or "UInt32[]" => ReadArray(length, binaryReader.ReadInt32),
+			"Int64[]" or "UInt64[]" => ReadArray(length, binaryReader.ReadInt64),
 			"Single[]" => ReadArray(length, binaryReader.ReadSingle),
 			"Double[]" => ReadArray(length, binaryReader.ReadDouble),
 			"Decimal[]" => ReadArray(length, binaryReader.ReadDecimal),
@@ -77,15 +73,31 @@ public class Reader(BinaryReader binaryReader) : IReader
 
 	private T[] ReadArray<T>(int length, Func<T> func)
 	{
+		if (binaryReader.ReadChar() != '[') throw new Exception();
 		T[] array = new T[length];
-		for (int i = 0; i < length; i++) array[i] = func();
+		
+		for (int i = 0; i < length; i++)
+		{
+			if (binaryReader.ReadChar() != ',') throw new Exception();
+			array[i] = func();
+		}
+		
+		if (binaryReader.ReadChar() != ']') throw new Exception();
 		return array;
 	}
 
 	private Array ReadArray(int length, Type type)
 	{
+		if (binaryReader.ReadChar() != '[') throw new Exception();
 		Array array = Array.CreateInstance(type, length);
-		for (int i = 0; i < length; i++) array.SetValue(ReadObject(type), i);
+		
+		for (int i = 0; i < length; i++)
+		{
+			if (binaryReader.ReadChar() != ',') throw new Exception();
+			array.SetValue(ReadObject(type), i);
+		}
+		
+		if (binaryReader.ReadChar() != ']') throw new Exception();
 		return array;
 	}
 }

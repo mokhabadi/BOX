@@ -8,7 +8,7 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 {
 	public void Write<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
-		binaryWriter.Write('|');
+		binaryWriter.Write(';');
 		binaryWriter.Write(key);
 		binaryWriter.Write((Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T)).Name);
 		binaryWriter.Write(value != null ? '=' : '~');
@@ -37,13 +37,9 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 			bool[] x => () => WriteArray(x, binaryWriter.Write),
 			char[] x => () => binaryWriter.Write(x),
 			byte[] x => () => binaryWriter.Write(x),
-			sbyte[] x => () => WriteArray(x, binaryWriter.Write),
 			short[] x => () => WriteArray(x, binaryWriter.Write),
-			ushort[] x => () => WriteArray(x, binaryWriter.Write),
 			int[] x => () => WriteArray(x, binaryWriter.Write),
-			uint[] x => () => WriteArray(x, binaryWriter.Write),
 			long[] x => () => WriteArray(x, binaryWriter.Write),
-			ulong[] x => () => WriteArray(x, binaryWriter.Write),
 			float[] x => () => WriteArray(x, binaryWriter.Write),
 			double[] x => () => WriteArray(x, binaryWriter.Write),
 			decimal[] x => () => WriteArray(x, binaryWriter.Write),
@@ -57,16 +53,24 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 		action();
 	}
 
-	void WriteObject(IBox box)
+	private void WriteObject(IBox box)
 	{
 		binaryWriter.Write('{');
 		box.WriteTo(this);
 		binaryWriter.Write('}');
 	}
 
-	void WriteArray<T>(T[] array, Action<T> action)
+	private void WriteArray<T>(T[] array, Action<T> action)
 	{
-		foreach (T t in array) action(t);
+		binaryWriter.Write('[');
+
+		foreach (T t in array)
+		{
+			binaryWriter.Write(',');
+			action(t);
+		}
+
+		binaryWriter.Write(']');
 	}
 
 	public static byte[] WriteToByteArray(IBox box)
