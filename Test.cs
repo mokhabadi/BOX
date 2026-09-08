@@ -114,6 +114,7 @@ public class Test
 	private readonly DateTime[]? dateTimeNonNullArray = [new(2026, 6, 6), new(2027, 7, 7)];
 	private readonly TimeSpan[]? timeSpanNonNullArray = [TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(30)];
 	private readonly TestBox[]? testBoxNonNullArray = [new (1, "one", new([1, 1.1f, 1.2f])), new(2, "two", new([2, 2.1f, 2.2f]))];
+	private readonly int[][] array2d = [[1, 2], [3, 4]];
 
 	public void Execute()
 	{
@@ -249,6 +250,7 @@ public class Test
 		writer.Write(testBoxArray);
 		writer.Write(testBoxNullArray);
 		writer.Write(testBoxNonNullArray);
+		writer.Write(array2d);
 	}
 
 	private void Read(MemoryStream stream)
@@ -370,6 +372,7 @@ public class Test
 		TestBox[] testBoxes1 = reader.Read(default(TestBox[]), nameof(testBoxArray));
 		TestBox[]? testBoxes2 = reader.Read(default(TestBox[]), nameof(testBoxNullArray));
 		TestBox[]? testBoxes3 = reader.Read(default(TestBox[]), nameof(testBoxNonNullArray));
+		reader.Read(out int[][] array2d);
 
 		AssertEquality(this.boolValue, boolValue);
 		AssertEquality(this.charValue, charValue);

@@ -12,14 +12,14 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
 		binaryWriter.Write(type.Name);
 		binaryWriter.Write(value != null ? '=' : '~');
-		if (value != null) WriteValue(value);
-		binaryWriter.Write(';');
+		WriteValue(value);
 	}
 
-	private void WriteValue<T>(T value)
+	private void WriteValue<T>(T? value)
 	{
-		if (value is Array array) binaryWriter.Write7BitEncodedInt(array.Length);
-		if (value is IBox box) WriteObject(box);
+		if (value is null) ;
+		else if (value is IBox box) WriteObject(box);
+		else if (value is Array array) WriteArray(array);
 		else if (value is bool @bool) binaryWriter.Write(@bool);
 		else if (value is char @char) binaryWriter.Write(@char);
 		else if (value is byte @byte) binaryWriter.Write(@byte);
@@ -36,20 +36,8 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 		else if (value is string @string) binaryWriter.Write(@string);
 		else if (value is DateTime dateTime) binaryWriter.Write(dateTime.ToBinary());
 		else if (value is TimeSpan timeSpan) binaryWriter.Write(timeSpan.Ticks);
-		else if (value is IBox[] boxArray) WriteArray(boxArray, WriteObject);
-		else if (value is bool[] boolArray) WriteArray(boolArray, binaryWriter.Write);
-		else if (value is char[] charArray) binaryWriter.Write(charArray);
-		else if (value is byte[] byteArray) binaryWriter.Write(byteArray);
-		else if (value is short[] shortArray) WriteArray(shortArray, binaryWriter.Write);
-		else if (value is int[] intArray) WriteArray(intArray, binaryWriter.Write);
-		else if (value is long[] longArray) WriteArray(longArray, binaryWriter.Write);
-		else if (value is float[] floatArray) WriteArray(floatArray, binaryWriter.Write);
-		else if (value is double[] doubleArray) WriteArray(doubleArray, binaryWriter.Write);
-		else if (value is decimal[] decimalArray) WriteArray(decimalArray, binaryWriter.Write);
-		else if (value is string[] stringArray) WriteArray(stringArray, binaryWriter.Write);
-		else if (value is DateTime[] dateTimeArray) WriteArray(dateTimeArray, dateTime => binaryWriter.Write(dateTime.ToBinary()));
-		else if (value is TimeSpan[] timeSpanArray) WriteArray(timeSpanArray, timeSpan => binaryWriter.Write(timeSpan.Ticks));
-		else throw new NotSupportedException(value!.ToString());
+		else throw new NotSupportedException(value.ToString());
+		binaryWriter.Write(';');
 	}
 
 	private void WriteObject(IBox box)
@@ -59,16 +47,11 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 		binaryWriter.Write('}');
 	}
 
-	private void WriteArray<T>(T[] array, Action<T> action)
+	private void WriteArray(Array array)
 	{
+		binaryWriter.Write7BitEncodedInt(array.Length);
 		binaryWriter.Write('[');
-
-		foreach (T t in array)
-		{
-			binaryWriter.Write(',');
-			action(t);
-		}
-
+		for (int i = 0; i < array.Length; i++) WriteValue(array.GetValue(i));
 		binaryWriter.Write(']');
 	}
 
