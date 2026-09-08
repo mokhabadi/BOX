@@ -8,11 +8,16 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 {
 	public void Write<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
-		binaryWriter.Write(';');
 		binaryWriter.Write(key);
-		binaryWriter.Write((Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T)).Name);
+		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+		binaryWriter.Write(type.Name);
 		binaryWriter.Write(value != null ? '=' : '~');
-		if (value == null) return;
+		if (value != null) WriteValue(value);
+		binaryWriter.Write(';');
+	}
+	
+	private void WriteValue<T>(T? value)
+	{
 		if (value is Array array) binaryWriter.Write7BitEncodedInt(array.Length);
 
 		Action action = value switch

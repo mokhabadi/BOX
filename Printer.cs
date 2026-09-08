@@ -31,16 +31,20 @@ public class Printer(BinaryReader binaryReader)
 
 	private string PrintItem()
 	{
-		char x = binaryReader.ReadChar();
-		if (x != ';') throw new Exception();
 		string key = binaryReader.ReadString();
 		string type = binaryReader.ReadString();
 		char valueSign = binaryReader.ReadChar();
-		if (valueSign != '=' && valueSign != '~') throw new Exception();
-		if (valueSign == '~') return $"{type} {key} = null;";
+		if (valueSign is not ('=' or '~')) throw new Exception();
+		string value = valueSign == '=' ? PrintValue(type) : "null";
+		if (binaryReader.ReadChar() != ';') throw new Exception();
+		return $"{type} {key} = {value};";
+	}
+
+	private string PrintValue(string type)
+	{
 		int length = type.EndsWith(']') ? binaryReader.Read7BitEncodedInt() : 0;
 
-		string value = type switch
+		return type switch
 		{
 			nameof(Boolean) => binaryReader.ReadBoolean().ToString(),
 			nameof(Char) => binaryReader.ReadChar().ToString(),
@@ -59,8 +63,8 @@ public class Printer(BinaryReader binaryReader)
 			nameof(DateTime) => DateTime.FromBinary(binaryReader.ReadInt64()).ToString(CultureInfo.InvariantCulture),
 			nameof(TimeSpan) => TimeSpan.FromTicks(binaryReader.ReadInt64()).ToString(),
 			"Boolean[]" => ReadArray(length, binaryReader.ReadBoolean),
-			"Char[]" => string.Join(',',binaryReader.ReadChars(length)),
-			"Byte[]" or "SByte[]" => string.Join(',',binaryReader.ReadBytes(length)),
+			"Char[]" => string.Join(',', binaryReader.ReadChars(length)),
+			"Byte[]" or "SByte[]" => string.Join(',', binaryReader.ReadBytes(length)),
 			"Int16[]" or "UInt16[]" => ReadArray(length, binaryReader.ReadInt16),
 			"Int32[]" or "UInt32[]" => ReadArray(length, binaryReader.ReadInt32),
 			"Int64[]" or "UInt64[]" => ReadArray(length, binaryReader.ReadInt64),
@@ -73,15 +77,13 @@ public class Printer(BinaryReader binaryReader)
 			_ when length > 0 => ReadArray(length),
 			_ => ReadObject(),
 		};
-
-		return $"{type} {key} = {value};";
 	}
 
 	private string ReadArray<T>(int length, Func<T> func)
 	{
 		if (binaryReader.ReadChar() != '[') throw new Exception();
 		StringBuilder stringBuilder = new("[");
-		
+
 		for (int i = 0; i < length; i++)
 		{
 			if (binaryReader.ReadChar() != ',') throw new Exception();

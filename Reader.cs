@@ -8,24 +8,29 @@ public class Reader(BinaryReader binaryReader) : IReader
 {
 	public void Read<T>(out T? value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
-		value = Read(default(T), key);
-	}
-
-	public T? Read<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
-	{
-		if (binaryReader.ReadChar() != ';') throw new Exception();
 		string expectedKey = binaryReader.ReadString();
 		key = key[(key.LastIndexOf(' ') + 1)..];
 		if (key != expectedKey) throw new Exception($"value mismatch '{key}', expected '{expectedKey}'");
 		string typeName = binaryReader.ReadString();
 		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
 		if (typeName != type.Name) throw new Exception($"type mismatch '{type.Name}', expected '{typeName}'");
-		char valueSign =  binaryReader.ReadChar();
-		if(valueSign != '=' && valueSign != '~') throw new Exception();
-		if(valueSign == '~') return default;
+		char valueSign = binaryReader.ReadChar();
+		if (valueSign is not ('=' or '~')) throw new Exception();
+		value = valueSign == '=' ? ReadValue<T>(type) : default;
+		if (binaryReader.ReadChar() != ';') throw new Exception();
+	}
+
+	public T? Read<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
+	{
+		Read(out T? t, key);
+		return t;
+	}
+
+	private T ReadValue<T>(Type type)
+	{
 		int length = type.IsArray ? binaryReader.Read7BitEncodedInt() : 0;
 
-		object @object = typeName switch
+		object @object = type.Name switch
 		{
 			nameof(Boolean) => binaryReader.ReadBoolean(),
 			nameof(Char) => binaryReader.ReadChar(),
@@ -55,11 +60,11 @@ public class Reader(BinaryReader binaryReader) : IReader
 			"String[]" => ReadArray(length, binaryReader.ReadString),
 			"DateTime[]" => ReadArray(length, () => DateTime.FromBinary(binaryReader.ReadInt64())),
 			"TimeSpan[]" => ReadArray(length, () => TimeSpan.FromTicks(binaryReader.ReadInt64())),
-			_ when typeof(T).IsArray => ReadArray(length, typeof(T).GetElementType()!),
-			_ => ReadObject(typeof(T)),
+			_ when type.IsArray => ReadArray(length, type.GetElementType()!),
+			_ => ReadObject(type),
 		};
 
-		return (T?)@object;
+		return (T)@object;
 	}
 
 	private object ReadObject(Type type)
@@ -75,13 +80,13 @@ public class Reader(BinaryReader binaryReader) : IReader
 	{
 		if (binaryReader.ReadChar() != '[') throw new Exception();
 		T[] array = new T[length];
-		
+
 		for (int i = 0; i < length; i++)
 		{
 			if (binaryReader.ReadChar() != ',') throw new Exception();
 			array[i] = func();
 		}
-		
+
 		if (binaryReader.ReadChar() != ']') throw new Exception();
 		return array;
 	}
@@ -90,13 +95,13 @@ public class Reader(BinaryReader binaryReader) : IReader
 	{
 		if (binaryReader.ReadChar() != '[') throw new Exception();
 		Array array = Array.CreateInstance(type, length);
-		
+
 		for (int i = 0; i < length; i++)
 		{
 			if (binaryReader.ReadChar() != ',') throw new Exception();
 			array.SetValue(ReadObject(type), i);
 		}
-		
+
 		if (binaryReader.ReadChar() != ']') throw new Exception();
 		return array;
 	}
