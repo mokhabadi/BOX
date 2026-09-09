@@ -8,12 +8,12 @@ public class Reader(BinaryReader binaryReader) : IReader
 {
 	public void Read<T>(out T value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
-		string expectedKey = binaryReader.ReadString();
-		key = key[(key.LastIndexOf(' ') + 1)..];
-		if (key != expectedKey) throw new Exception($"value mismatch '{key}', expected '{expectedKey}'");
 		string typeName = binaryReader.ReadString();
 		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
 		if (typeName != type.Name) throw new Exception($"type mismatch '{type.Name}', expected '{typeName}'");
+		string expectedKey = binaryReader.ReadString();
+		key = key[(key.LastIndexOf(' ') + 1)..];
+		if (key != expectedKey) throw new Exception($"value mismatch '{key}', expected '{expectedKey}'");
 		char valueSign = binaryReader.ReadChar();
 		if (valueSign is not ('=' or '~')) throw new Exception();
 		value = (T)ReadValue(valueSign, type);
@@ -47,7 +47,7 @@ public class Reader(BinaryReader binaryReader) : IReader
 		else if (type == typeof(DateTime)) value = DateTime.FromBinary(binaryReader.ReadInt64());
 		else if (type == typeof(TimeSpan)) value = TimeSpan.FromTicks(binaryReader.ReadInt64());
 		else if (type == typeof(char[])) value = ReadArray(binaryReader.ReadChars);
-		else if (type == typeof(byte[]) || type == typeof(sbyte[])) value = ReadArray(binaryReader.ReadBytes);
+		else if (type.IsAssignableTo(typeof(byte[]))) value = ReadArray(binaryReader.ReadBytes);
 		else if (type.IsArray) value = ReadArray(type.GetElementType()!);
 		else throw new NotSupportedException(type.FullName);
 		if (binaryReader.ReadChar() != ';') throw new Exception();

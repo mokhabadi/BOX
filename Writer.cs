@@ -8,9 +8,9 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 {
 	public void Write<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
-		binaryWriter.Write(key);
 		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
 		binaryWriter.Write(type.Name);
+		binaryWriter.Write(key);
 		binaryWriter.Write(value != null ? '=' : '~');
 		WriteValue(value);
 	}
