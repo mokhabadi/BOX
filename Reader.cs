@@ -19,10 +19,10 @@ public class Reader(BinaryReader binaryReader) : IReader
 		value = (T)ReadValue(valueSign, type);
 	}
 
-	public T Read<T>(T? value, [CallerArgumentExpression(nameof(value))] string key = "")
+	public T Read<T>(T? _, [CallerArgumentExpression(nameof(_))] string key = "")
 	{
-		Read(out T? t, key);
-		return t!;
+		Read(out T? value, key);
+		return value!;
 	}
 
 	private object ReadValue(char valueSign, Type type)
@@ -80,5 +80,19 @@ public class Reader(BinaryReader binaryReader) : IReader
 		T array = func(length);
 		if (binaryReader.ReadChar() != '"') throw new Exception();
 		return array;
+	}
+
+	public static void Read<T>(out T value, byte[] bytes, [CallerArgumentExpression(nameof(value))] string key = "")
+	{
+		using MemoryStream memoryStream = new(bytes);
+		using BinaryReader binaryReader = new(memoryStream);
+		Reader reader = new(binaryReader);
+		reader.Read(out value, key);
+	}
+
+	public static T Read<T>(T? _, byte[] bytes, [CallerArgumentExpression(nameof(_))] string key = "")
+	{
+		Read(out T value, bytes, key);
+		return value;
 	}
 }

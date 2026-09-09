@@ -50,7 +50,7 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 
 	private void WriteArray(Array array)
 	{
-		if(array.Rank != 1) throw new NotSupportedException();
+		if (array.Rank != 1) throw new NotSupportedException();
 		binaryWriter.Write7BitEncodedInt(array.Length);
 		binaryWriter.Write('[');
 		for (int i = 0; i < array.Length; i++) WriteValue(array.GetValue(i));
@@ -65,13 +65,12 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 		binaryWriter.Write('"');
 	}
 
-	public static byte[] WriteToByteArray(IBox box)
+	public static void Write<T>(T value, out byte[] bytes, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
 		using MemoryStream memoryStream = new();
 		using BinaryWriter binaryWriter = new(memoryStream);
 		Writer writer = new(binaryWriter);
-		box.WriteTo(writer);
-		byte[] bytes = memoryStream.ToArray();
-		return bytes;
+		writer.Write(value, key);
+		bytes = memoryStream.ToArray();
 	}
 }
