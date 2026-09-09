@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Box;
 
-public class Test
+public class Tester
 {
 	private readonly bool boolValue = true;
 	private readonly char charValue = 'M';
