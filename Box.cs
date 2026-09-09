@@ -1,12 +1,12 @@
 ﻿namespace BOX;
 
-public class BoxOf<T> : IBox
+public class Box<T> : IBox
 {
 	private T value;
 
 	public T Value => value;
 
-	public BoxOf(T value)
+	public Box(T value)
 	{
 		this.value = value;
 	}
