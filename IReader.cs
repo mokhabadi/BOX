@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace Box;
+namespace BOX;
 
 public interface IReader
 {

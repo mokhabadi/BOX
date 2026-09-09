@@ -2,7 +2,7 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 
-namespace Box;
+namespace BOX;
 
 public class Writer(BinaryWriter binaryWriter) : IWriter
 {

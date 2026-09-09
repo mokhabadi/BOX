@@ -1,4 +1,4 @@
-﻿namespace Box;
+﻿namespace BOX;
 
 public interface IBox
 {
