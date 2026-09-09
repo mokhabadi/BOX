@@ -2,22 +2,20 @@
 
 public class Box<T> : IBox
 {
-	private T value;
-
-	public T Value => value;
+	public T Value { get; private set; }
 
 	public Box(T value)
 	{
-		this.value = value;
+		Value = value;
 	}
 
 	public void WriteTo(IWriter writer)
 	{
-		writer.Write(value);
+		writer.Write(Value);
 	}
 
 	public void ReadFrom(IReader reader)
 	{
-		reader.Read(out value);
+		Value = reader.Read(Value);
 	}
 }
