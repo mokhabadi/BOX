@@ -29,7 +29,7 @@ public class Reader(BinaryReader binaryReader) : IReader
 	{
 		object? value;
 		if (valueSign == '~') value = null;
-		else if (type.IsArray) value = ReadArray(type.GetElementType()!);
+		else if (type.IsAssignableTo(typeof(IBox))) value = ReadObject(type);
 		else if (type == typeof(bool)) value = binaryReader.ReadBoolean();
 		else if (type == typeof(char)) value = binaryReader.ReadChar();
 		else if (type == typeof(byte)) value = binaryReader.ReadByte();
@@ -46,7 +46,9 @@ public class Reader(BinaryReader binaryReader) : IReader
 		else if (type == typeof(string)) value = binaryReader.ReadString();
 		else if (type == typeof(DateTime)) value = DateTime.FromBinary(binaryReader.ReadInt64());
 		else if (type == typeof(TimeSpan)) value = TimeSpan.FromTicks(binaryReader.ReadInt64());
-		else if (type.IsAssignableTo(typeof(IBox))) value = ReadObject(type);
+		else if (type == typeof(char[])) value = ReadArray(binaryReader.ReadChars);
+		else if (type == typeof(byte[]) || type == typeof(sbyte[])) value = ReadArray(binaryReader.ReadBytes);
+		else if (type.IsArray) value = ReadArray(type.GetElementType()!);
 		else throw new NotSupportedException(type.FullName);
 		if (binaryReader.ReadChar() != ';') throw new Exception();
 		return value!;
@@ -68,6 +70,15 @@ public class Reader(BinaryReader binaryReader) : IReader
 		Array array = Array.CreateInstance(type, length);
 		for (int i = 0; i < length; i++) array.SetValue(ReadValue('=', type), i);
 		if (binaryReader.ReadChar() != ']') throw new Exception();
+		return array;
+	}
+
+	private T ReadArray<T>(Func<int, T> func)
+	{
+		int length = binaryReader.Read7BitEncodedInt();
+		if (binaryReader.ReadChar() != '"') throw new Exception();
+		T array = func(length);
+		if (binaryReader.ReadChar() != '"') throw new Exception();
 		return array;
 	}
 }

@@ -42,7 +42,6 @@ public class Printer(BinaryReader binaryReader)
 	{
 		string value;
 		if (valueSign == '~') value = "null";
-		else if (type.EndsWith(']')) value = ReadArray(type[..^2]);
 		else if (type == nameof(Boolean)) value = binaryReader.ReadBoolean().ToString();
 		else if (type == nameof(Char)) value = binaryReader.ReadChar().ToString();
 		else if (type == nameof(Byte)) value = binaryReader.ReadByte().ToString();
@@ -59,6 +58,9 @@ public class Printer(BinaryReader binaryReader)
 		else if (type == nameof(String)) value = binaryReader.ReadString();
 		else if (type == nameof(DateTime)) value = DateTime.FromBinary(binaryReader.ReadInt64()).ToString(CultureInfo.InvariantCulture);
 		else if (type == nameof(TimeSpan)) value = TimeSpan.FromTicks(binaryReader.ReadInt64()).ToString();
+		else if (type == typeof(char[]).Name) value = ReadArray(binaryReader.ReadChars);
+		else if (type == typeof(byte[]).Name || type == typeof(sbyte[]).Name) value = ReadArray(binaryReader.ReadBytes);
+		else if (type.EndsWith("[]")) value = ReadArray(type[..^2]);
 		else value = ReadObject();
 		if (binaryReader.ReadChar() != ';') throw new Exception();
 		return value;
@@ -90,6 +92,18 @@ public class Printer(BinaryReader binaryReader)
 
 		stringBuilder.Append(']');
 		if (binaryReader.ReadChar() != ']') throw new Exception();
+		return stringBuilder.ToString();
+	}
+
+	private string ReadArray<T>(Func<int, T[]> func)
+	{
+		int length = binaryReader.Read7BitEncodedInt();
+		if (binaryReader.ReadChar() != '"') throw new Exception();
+		StringBuilder stringBuilder = new("\"");
+		T[] array = func(length);
+		stringBuilder.Append(string.Join(", ", array));
+		stringBuilder.Append('"');
+		if (binaryReader.ReadChar() != '"') throw new Exception();
 		return stringBuilder.ToString();
 	}
 }
