@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 
@@ -9,11 +10,11 @@ public class Reader(BinaryReader binaryReader) : IReader
 	public void Read<T>(out T value, [CallerArgumentExpression(nameof(value))] string key = "")
 	{
 		string typeName = binaryReader.ReadString();
-		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
-		if (typeName != type.Name) throw new Exception($"type mismatch '{type.Name}', expected '{typeName}'");
 		string expectedKey = binaryReader.ReadString();
+		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
 		key = key[(key.LastIndexOf(' ') + 1)..];
-		if (key != expectedKey) throw new Exception($"value mismatch '{key}', expected '{expectedKey}'");
+		if (key != expectedKey) throw new Exception($"key mismatch '{type} {key}', expected '{typeName} {expectedKey}'");
+		if (typeName != type.Name) Debug.WriteLine($"type mismatch '{type} {key}', expected '{typeName} {expectedKey}'");
 		char valueSign = binaryReader.ReadChar();
 		if (valueSign is not ('=' or '~')) throw new Exception();
 		value = (T)ReadValue(valueSign, type);
