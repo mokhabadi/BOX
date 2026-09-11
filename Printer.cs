@@ -17,8 +17,8 @@ public class Printer(BinaryReader binaryReader)
 	private void PrintItem(StringBuilder stringBuilder)
 	{
 		string type = binaryReader.ReadString();
-		stringBuilder.Append(type + " ");
-		stringBuilder.Append(binaryReader.ReadString() + " = ");
+		string key = binaryReader.ReadString();
+		stringBuilder.Append($"{type} {key} = ");
 		char valueSign = binaryReader.ReadChar();
 		PrintValue(valueSign, type, stringBuilder);
 	}
@@ -70,5 +70,13 @@ public class Printer(BinaryReader binaryReader)
 		stringBuilder.Append(binaryReader.ReadChar());
 		stringBuilder.Append(string.Join(" ", func(length)));
 		stringBuilder.Append(binaryReader.ReadChar());
+	}
+
+	public static string Print(byte[] bytes)
+	{
+		using MemoryStream memoryStream = new(bytes);
+		using BinaryReader binaryReader = new(memoryStream);
+		Printer printer = new(binaryReader);
+		return printer.Print();
 	}
 }
