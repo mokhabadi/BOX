@@ -45,7 +45,8 @@ public class Printer(BinaryReader binaryReader)
 		else if (type == typeof(char[]).Name) ReadArray(binaryReader.ReadChars, stringBuilder);
 		else if (type == typeof(byte[]).Name || type == typeof(sbyte[]).Name) ReadArray(binaryReader.ReadBytes, stringBuilder);
 		else if (type.EndsWith("[]")) ReadArray(type[..^2], stringBuilder);
-		else ReadObject(stringBuilder);
+		else if (binaryReader.PeekChar() == '{') ReadObject(stringBuilder);
+		else stringBuilder.Append("new");
 		stringBuilder.Append(binaryReader.ReadChar()+ " ");
 	}
 

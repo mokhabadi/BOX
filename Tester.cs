@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -251,6 +252,8 @@ public class Tester
 		writer.Write(testBoxNullArray);
 		writer.Write(testBoxNonNullArray);
 		writer.Write(array2D);
+		writer.Write(new DateTimeOffset(), "DateTimeOffset");
+		writer.Write(new List<int>(), "List<int>");
 	}
 
 	private void Read(MemoryStream stream)
@@ -373,6 +376,10 @@ public class Tester
 		TestBox[]? testBoxes2 = reader.Read<TestBox[]?>(null, nameof(testBoxNullArray));
 		TestBox[]? testBoxes3 = reader.Read<TestBox[]?>(null, nameof(testBoxNonNullArray));
 		reader.Read(out int[][] array2D);
+		reader.Read(out DateTimeOffset dateTimeOffset, "DateTimeOffset");
+		reader.Read(out List<int> list, "List<int>");
+		Trace.WriteLine(dateTimeOffset);
+		Trace.WriteLine(list);
 
 		AssertEquality(this.boolValue, boolValue);
 		AssertEquality(this.charValue, charValue);

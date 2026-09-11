@@ -37,7 +37,6 @@ public class Writer(BinaryWriter binaryWriter) : IWriter
 		else if (value is char[] chars) WriteArray(chars, binaryWriter.Write);
 		else if (value is byte[] bytes) WriteArray(bytes, binaryWriter.Write);
 		else if (value is Array array) WriteArray(array);
-		else if (value != null) throw new NotSupportedException(typeof(T).FullName);
 		binaryWriter.Write(';');
 	}
 
