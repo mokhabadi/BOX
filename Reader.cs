@@ -48,7 +48,7 @@ public class Reader(BinaryReader binaryReader) : IReader
 		else if (type == typeof(char[])) value = ReadArray(binaryReader.ReadChars);
 		else if (type.IsAssignableTo(typeof(byte[]))) value = ReadArray(binaryReader.ReadBytes);
 		else if (type.IsArray) value = ReadArray(type.GetElementType()!);
-		else value = Activator.CreateInstance(type);
+		else throw new NotSupportedException(type.FullName);
 		if (binaryReader.ReadChar() != ';') throw new Exception();
 		return value!;
 	}
