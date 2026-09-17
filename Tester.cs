@@ -116,7 +116,7 @@ public class Tester
 	private readonly TestBox[]? testBoxNonNullArray = [new(1, "one", new([1, 1.1f, 1.2f])), new(2, "two", new([2, 2.1f, 2.2f]))];
 	private readonly int[][] array2D = [[1, 2], [3, 4]];
 
-	public void Execute()
+	public void Test()
 	{
 		MemoryStream memoryStream = new();
 		Write(memoryStream);

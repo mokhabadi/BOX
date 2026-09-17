@@ -12,7 +12,7 @@ public class Reader(BinaryReader binaryReader) : IReader
 		string expectedKey = binaryReader.ReadString();
 		Type type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
 		key = key[(key.LastIndexOf(' ') + 1)..];
-		if (key != expectedKey) throw new Exception($"key mismatch '{type.Name} {key}', expected '{typeName} {expectedKey}'");
+		if (key != expectedKey || type.Name != typeName) throw new Exception($"key/type mismatch '{type.Name} {key}', expected '{typeName} {expectedKey}'");
 		char valueSign = binaryReader.ReadChar();
 		if (valueSign is not ('=' or '~')) throw new Exception();
 		value = (T)ReadValue(valueSign, type);
